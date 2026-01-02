@@ -688,22 +688,9 @@
         return;
       }
 
-      // 優先使用投資組合列表剛抓到的價格（避免重複打 API）
-      const cached = [];
-      const toFetch = [];
-      selectedAssets.forEach((a) => {
-        const cachedAsset = pricedPortfolioCacheById.get(a.id);
-        if (cachedAsset) cached.push(cachedAsset);
-        else toFetch.push(a);
-      });
-
-      if (toFetch.length === 0) {
-        updateTicker(cached);
-        return;
-      }
-
-      const { updatedAssets } = await getPricedAssets(toFetch);
-      updateTicker([...cached, ...updatedAssets]);
+      // 跑馬燈以「最新即時價格」為準：每次刷新都重新抓價
+      const { updatedAssets } = await getPricedAssets(selectedAssets);
+      updateTicker(updatedAssets);
     }
 
     // ==========================
