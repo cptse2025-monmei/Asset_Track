@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>§Úªº§ë¸ê»öªíªO</title>
+  <title>æˆ‘çš„æŠ•è³‡å„€è¡¨æ¿</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: 'Segoe UI', sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f9f9f9; }
@@ -17,71 +17,71 @@
   </style>
 </head>
 <body>
-  <h1>?? §Úªº§ë¸ê»öªíªO</h1>
+  <h1>?? æˆ‘çš„æŠ•è³‡å„€è¡¨æ¿</h1>
 
-  <!-- ¸ê²£¿é¤J°Ï -->
+  <!-- è³‡ç”¢è¼¸å…¥å€ -->
   <div class="card">
-    <h2>·s¼W/½s¿è§ë¸ê¼Ğªº</h2>
+    <h2>æ–°å¢/ç·¨è¼¯æŠ•è³‡æ¨™çš„</h2>
     <div>
-      <input type="text" id="assetName" placeholder="¸ê²£¦WºÙ¡]¦p AAPL¡B¤ñ¯S¹ô¡^" />
+      <input type="text" id="assetName" placeholder="è³‡ç”¢åç¨±ï¼ˆå¦‚ AAPLã€æ¯”ç‰¹å¹£ï¼‰" />
       <select id="assetType">
-        <option value="stock">ªÑ²¼</option>
-        <option value="crypto">¥[±K³f¹ô</option>
-        <option value="commodity">°Ó«~¡]¶Àª÷µ¥¡^</option>
-        <option value="cash">²{ª÷/¨ä¥L</option>
+        <option value="stock">è‚¡ç¥¨</option>
+        <option value="crypto">åŠ å¯†è²¨å¹£</option>
+        <option value="commodity">å•†å“ï¼ˆé»ƒé‡‘ç­‰ï¼‰</option>
+        <option value="cash">ç¾é‡‘/å…¶ä»–</option>
       </select>
     </div>
     <div>
-      <input type="number" id="assetAmount" placeholder="¼Æ¶q¡]ªÑ¼Æ¡B¼Æ¶qµ¥¡^" step="any" />
-      <input type="text" id="assetSymbol" placeholder="¥N¸¹¡]¥Î©ó¬d¸ß»ù®æ¡A¦p BTC¡BGC=F¡^" />
+      <input type="number" id="assetAmount" placeholder="æ•¸é‡ï¼ˆè‚¡æ•¸ã€æ•¸é‡ç­‰ï¼‰" step="any" />
+      <input type="text" id="assetSymbol" placeholder="ä»£è™Ÿï¼ˆç”¨æ–¼æŸ¥è©¢åƒ¹æ ¼ï¼Œå¦‚ BTCã€GC=Fï¼‰" />
     </div>
-    <button onclick="addAsset()">·s¼W¸ê²£</button>
-    <button onclick="clearAll()">?? ²M°£©Ò¦³¸ê®Æ¡]¶È¥»¾÷¡^</button>
+    <button onclick="addAsset()">æ–°å¢è³‡ç”¢</button>
+    <button onclick="clearAll()">?? æ¸…é™¤æ‰€æœ‰è³‡æ–™ï¼ˆåƒ…æœ¬æ©Ÿï¼‰</button>
   </div>
 
-  <!-- ¸ê²£¦Cªí»P§Y®É»ù®æ -->
+  <!-- è³‡ç”¢åˆ—è¡¨èˆ‡å³æ™‚åƒ¹æ ¼ -->
   <div class="card">
-    <h2>§Úªº§ë¸ê²Õ¦X</h2>
+    <h2>æˆ‘çš„æŠ•è³‡çµ„åˆ</h2>
     <div id="portfolioList"></div>
-    <p><strong>Á`¸ê²£»ù­È¡]¦ôºâ¡^¡G</strong> <span id="totalValue">NT$ 0</span></p>
-    <button onclick="saveSnapshot()">?? °O¿ı¤µ¤éÁ`­È¡]¥Î©óÁÍ¶Õ¹Ï¡^</button>
+    <p><strong>ç¸½è³‡ç”¢åƒ¹å€¼ï¼ˆä¼°ç®—ï¼‰ï¼š</strong> <span id="totalValue">NT$ 0</span></p>
+    <button onclick="saveSnapshot()">?? è¨˜éŒ„ä»Šæ—¥ç¸½å€¼ï¼ˆç”¨æ–¼è¶¨å‹¢åœ–ï¼‰</button>
   </div>
 
-  <!-- ¸ê²£°t¸m¹Ï -->
+  <!-- è³‡ç”¢é…ç½®åœ– -->
   <div class="card">
-    <h2>¸ê²£°t¸m¤ñ¨Ò</h2>
+    <h2>è³‡ç”¢é…ç½®æ¯”ä¾‹</h2>
     <canvas id="allocationChart" height="200"></canvas>
   </div>
 
-  <!-- »ù­ÈÁÍ¶Õ¹Ï -->
+  <!-- åƒ¹å€¼è¶¨å‹¢åœ– -->
   <div class="card">
-    <h2>§ë¸ê²Õ¦X»ù­ÈÁÍ¶Õ</h2>
+    <h2>æŠ•è³‡çµ„åˆåƒ¹å€¼è¶¨å‹¢</h2>
     <canvas id="trendChart" height="150"></canvas>
   </div>
 
-  <!-- §ë¸êµ§°O -->
+  <!-- æŠ•è³‡ç­†è¨˜ -->
   <div class="card">
-    <h2>§ë¸êµ§°O</h2>
-    <textarea id="note" placeholder="¦b³o¸Ì°O¿ı§Aªº§ë¸ê·Qªk¡Bµ¦²¤©Î´£¿ô..." rows="4" style="width:100%;"></textarea>
-    <button onclick="saveNote()">Àx¦sµ§°O</button>
+    <h2>æŠ•è³‡ç­†è¨˜</h2>
+    <textarea id="note" placeholder="åœ¨é€™è£¡è¨˜éŒ„ä½ çš„æŠ•è³‡æƒ³æ³•ã€ç­–ç•¥æˆ–æé†’..." rows="4" style="width:100%;"></textarea>
+    <button onclick="saveNote()">å„²å­˜ç­†è¨˜</button>
   </div>
 
   <script>
     // ==========================
-    // ¸ê®Æµ²ºc¡G©Ò¦³¸ê®Æ¦s¦b localStorage
+    // è³‡æ–™çµæ§‹ï¼šæ‰€æœ‰è³‡æ–™å­˜åœ¨ localStorage
     // ==========================
     let portfolio = JSON.parse(localStorage.getItem('portfolio') || '[]');
     let snapshots = JSON.parse(localStorage.getItem('snapshots') || '[]');
     let note = localStorage.getItem('investmentNote') || '';
 
     // ==========================
-    // ªì©l¤Æ
+    // åˆå§‹åŒ–
     // ==========================
     document.getElementById('note').value = note;
     loadPortfolio();
 
     // ==========================
-    // ¥\¯à¡G·s¼W¸ê²£
+    // åŠŸèƒ½ï¼šæ–°å¢è³‡ç”¢
     // ==========================
     function addAsset() {
       const name = document.getElementById('assetName').value.trim();
@@ -90,7 +90,7 @@
       const symbol = document.getElementById('assetSymbol').value.trim();
 
       if (!name || isNaN(amount)) {
-        alert('½Ğ¶ñ¼g§¹¾ã¸ê°T');
+        alert('è«‹å¡«å¯«å®Œæ•´è³‡è¨Š');
         return;
       }
 
@@ -100,14 +100,14 @@
     }
 
     // ==========================
-    // ¥\¯à¡G¸ü¤J§ë¸ê²Õ¦X¨Ã¨ú±o§Y®É»ù®æ
+    // åŠŸèƒ½ï¼šè¼‰å…¥æŠ•è³‡çµ„åˆä¸¦å–å¾—å³æ™‚åƒ¹æ ¼
     // ==========================
     async function loadPortfolio() {
       const listEl = document.getElementById('portfolioList');
-      listEl.innerHTML = '<p>¥¿¦b¸ü¤J§Y®É»ù®æ...</p>';
+      listEl.innerHTML = '<p>æ­£åœ¨è¼‰å…¥å³æ™‚åƒ¹æ ¼...</p>';
 
       if (portfolio.length === 0) {
-        listEl.innerHTML = '<p>©|¥¼·s¼W¥ô¦ó§ë¸ê¼Ğªº¡C</p>';
+        listEl.innerHTML = '<p>å°šæœªæ–°å¢ä»»ä½•æŠ•è³‡æ¨™çš„ã€‚</p>';
         renderAllocationChart([]);
         return;
       }
@@ -115,18 +115,18 @@
       let totalValue = 0;
       const assetValues = [];
 
-      // ¦P®É¨ú±o©Ò¦³¸ê²£ªº§Y®É»ù®æ
+      // åŒæ™‚å–å¾—æ‰€æœ‰è³‡ç”¢çš„å³æ™‚åƒ¹æ ¼
       const pricePromises = portfolio.map(async (asset) => {
         let price = 0;
         let displayPrice = 'N/A';
 
         try {
           if (asset.type === 'crypto') {
-            // ¨Ï¥Î CoinGecko¡]¤ä´©¤ñ¯S¹ô¡B¥H¤Ó¹ôµ¥¡^
+            // ä½¿ç”¨ CoinGeckoï¼ˆæ”¯æ´æ¯”ç‰¹å¹£ã€ä»¥å¤ªå¹£ç­‰ï¼‰
             const idMap = {
               'BTC': 'bitcoin',
               'ETH': 'ethereum',
-              // ¥i¨Ì»İ­nÂX¥R
+              // å¯ä¾éœ€è¦æ“´å……
             };
             const id = idMap[asset.symbol.toUpperCase()] || asset.symbol.toLowerCase();
             const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=twd`);
@@ -135,17 +135,17 @@
             displayPrice = price ? `NT$ ${price.toLocaleString()}` : 'N/A';
           } 
           else if (asset.type === 'commodity' && asset.symbol === 'GOLD') {
-            // ¨Ï¥Î GoldAPI¡]§K¶O¡A»İµù¥U¨ú±oª÷Æ_¡A¦ı§Ú­Ì¥Î´À¥N¤è®×¡^
-            // §Kª÷Æ_¤è®×¡G¨Ï¥Î Alpha Vantage ªº¼Æ­Èª÷Äİ¡]³o¸ÌÂ²¤Æ¬°©T©w¶×²v¦ôºâ¡^
-            // ¹ê»Ú¥i§ï¥Î¡Ghttps://www.goldapi.io/ ¡]»İª÷Æ_¡^
-            // ¦¹³B¥H 1 ¯s¥q ? NT$ 65,000 ¦ôºâ¡]¶È¥Ü½d¡^
-            price = 65000 / 31.1035; // ´«ºâ¨C¤½§J
-            displayPrice = `NT$ ${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}/¤½§J`;
+            // ä½¿ç”¨ GoldAPIï¼ˆå…è²»ï¼Œéœ€è¨»å†Šå–å¾—é‡‘é‘°ï¼Œä½†æˆ‘å€‘ç”¨æ›¿ä»£æ–¹æ¡ˆï¼‰
+            // å…é‡‘é‘°æ–¹æ¡ˆï¼šä½¿ç”¨ Alpha Vantage çš„æ•¸å€¼é‡‘å±¬ï¼ˆé€™è£¡ç°¡åŒ–ç‚ºå›ºå®šåŒ¯ç‡ä¼°ç®—ï¼‰
+            // å¯¦éš›å¯æ”¹ç”¨ï¼šhttps://www.goldapi.io/ ï¼ˆéœ€é‡‘é‘°ï¼‰
+            // æ­¤è™•ä»¥ 1 ç›å¸ ? NT$ 65,000 ä¼°ç®—ï¼ˆåƒ…ç¤ºç¯„ï¼‰
+            price = 65000 / 31.1035; // æ›ç®—æ¯å…¬å…‹
+            displayPrice = `NT$ ${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}/å…¬å…‹`;
           }
           else if (asset.type === 'stock') {
-            // ªÑ²¼»ù®æ¡G¨Ï¥Î Yahoo Finance¡]³z¹L public proxy¡^
-            // ª`·N¡GYahoo Finance ©x¤è¤£´£¨Ñ§K¶O API¡A¦ı¦³¤½¶}¥N²z¥i¥Î
-            // ¥H¤U¨Ï¥Î yfinance ªº¤½¶}¥N²z¡]«D©x¤è¡A¦ı±`¨£¡^
+            // è‚¡ç¥¨åƒ¹æ ¼ï¼šä½¿ç”¨ Yahoo Financeï¼ˆé€é public proxyï¼‰
+            // æ³¨æ„ï¼šYahoo Finance å®˜æ–¹ä¸æä¾›å…è²» APIï¼Œä½†æœ‰å…¬é–‹ä»£ç†å¯ç”¨
+            // ä»¥ä¸‹ä½¿ç”¨ yfinance çš„å…¬é–‹ä»£ç†ï¼ˆéå®˜æ–¹ï¼Œä½†å¸¸è¦‹ï¼‰
             const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${asset.symbol}?region=TW&lang=zh-TW`);
             const data = await res.json();
             const close = data.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
@@ -153,12 +153,12 @@
             displayPrice = price ? `NT$ ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'N/A';
           }
           else {
-            // ²{ª÷©Î¨ä¥L¡G¨Ï¥ÎªÌ¤â°Ê¿é¤J»ù­È¡]¦¹³B³]¬° 1¡^
+            // ç¾é‡‘æˆ–å…¶ä»–ï¼šä½¿ç”¨è€…æ‰‹å‹•è¼¸å…¥åƒ¹å€¼ï¼ˆæ­¤è™•è¨­ç‚º 1ï¼‰
             price = 1;
             displayPrice = `NT$ ${asset.amount.toLocaleString()}`;
           }
         } catch (e) {
-          console.error('¨ú±o»ù®æ¥¢±Ñ', asset, e);
+          console.error('å–å¾—åƒ¹æ ¼å¤±æ•—', asset, e);
         }
 
         const value = asset.type === 'cash' ? asset.amount : (price * asset.amount);
@@ -170,28 +170,28 @@
 
       const updatedAssets = await Promise.all(pricePromises);
 
-      // §ó·sµe­±
+      // æ›´æ–°ç•«é¢
       let html = '';
       updatedAssets.forEach((asset, i) => {
         html += `
           <div class="asset-item">
             <strong>${asset.name}</strong> (${asset.symbol || asset.type})
-            <span>¼Æ¶q: ${asset.amount}</span>
-            <span>¥«»ù: ${asset.displayPrice}</span>
-            <span>¥«­È: NT$ ${asset.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+            <span>æ•¸é‡: ${asset.amount}</span>
+            <span>å¸‚åƒ¹: ${asset.displayPrice}</span>
+            <span>å¸‚å€¼: NT$ ${asset.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
           </div>
         `;
       });
-      html += `<p><strong>Á`¸ê²£»ù­È¡GNT$ ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong></p>`;
+      html += `<p><strong>ç¸½è³‡ç”¢åƒ¹å€¼ï¼šNT$ ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong></p>`;
       listEl.innerHTML = html;
       document.getElementById('totalValue').textContent = `NT$ ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 
-      // Àx¦s§ó·s«áªº²Õ¦X¡]§t»ù®æ§Ö¨ú¡^
+      // å„²å­˜æ›´æ–°å¾Œçš„çµ„åˆï¼ˆå«åƒ¹æ ¼å¿«å–ï¼‰
       renderAllocationChart(updatedAssets);
     }
 
     // ==========================
-    // ¥\¯à¡GÃ¸»s¸ê²£°t¸m»æ¹Ï
+    // åŠŸèƒ½ï¼šç¹ªè£½è³‡ç”¢é…ç½®é¤…åœ–
     // ==========================
     let allocationChart = null;
     function renderAllocationChart(assets) {
@@ -225,7 +225,7 @@
     }
 
     // ==========================
-    // ¥\¯à¡G°O¿ıÁ`­È§Ö·Ó¡]¥Î©óÁÍ¶Õ¹Ï¡^
+    // åŠŸèƒ½ï¼šè¨˜éŒ„ç¸½å€¼å¿«ç…§ï¼ˆç”¨æ–¼è¶¨å‹¢åœ–ï¼‰
     // ==========================
     function saveSnapshot() {
       const totalEl = document.getElementById('totalValue').textContent;
@@ -233,10 +233,10 @@
       const value = parseInt(valueText) || 0;
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-      // Á×§K¦P¤@¤Ñ­«½Æ°O¿ı
+      // é¿å…åŒä¸€å¤©é‡è¤‡è¨˜éŒ„
       const exists = snapshots.some(s => s.date === today);
       if (exists) {
-        if (!confirm('¤µ¤Ñ¤w°O¿ı¹L§Ö·Ó¡A¬O§_ÂĞ»\¡H')) return;
+        if (!confirm('ä»Šå¤©å·²è¨˜éŒ„éå¿«ç…§ï¼Œæ˜¯å¦è¦†è“‹ï¼Ÿ')) return;
         snapshots = snapshots.filter(s => s.date !== today);
       }
 
@@ -244,11 +244,11 @@
       snapshots.sort((a, b) => a.date.localeCompare(b.date));
       localStorage.setItem('snapshots', JSON.stringify(snapshots));
       renderTrendChart();
-      alert('? ¤w°O¿ı¤µ¤éÁ`­È');
+      alert('? å·²è¨˜éŒ„ä»Šæ—¥ç¸½å€¼');
     }
 
     // ==========================
-    // ¥\¯à¡GÃ¸»s»ù­ÈÁÍ¶Õ¹Ï
+    // åŠŸèƒ½ï¼šç¹ªè£½åƒ¹å€¼è¶¨å‹¢åœ–
     // ==========================
     let trendChart = null;
     function renderTrendChart() {
@@ -256,7 +256,7 @@
       if (trendChart) trendChart.destroy();
 
       if (snapshots.length === 0) {
-        document.getElementById('trendChart').parentElement.innerHTML = '<p>©|¥¼°O¿ı¥ô¦óÁ`­È§Ö·Ó¡C</p>';
+        document.getElementById('trendChart').parentElement.innerHTML = '<p>å°šæœªè¨˜éŒ„ä»»ä½•ç¸½å€¼å¿«ç…§ã€‚</p>';
         return;
       }
 
@@ -268,7 +268,7 @@
         data: {
           labels: labels,
           datasets: [{
-            label: '§ë¸ê²Õ¦XÁ`­È (NT$)',
+            label: 'æŠ•è³‡çµ„åˆç¸½å€¼ (NT$)',
             data: data,
             borderColor: '#36A2EB',
             backgroundColor: 'rgba(54, 162, 235, 0.1)',
@@ -293,16 +293,16 @@
       });
     }
 
-    // ªì©l¤ÆÁÍ¶Õ¹Ï
+    // åˆå§‹åŒ–è¶¨å‹¢åœ–
     renderTrendChart();
 
     // ==========================
-    // ¥\¯à¡Gµ§°O»P¸ê®ÆºŞ²z
+    // åŠŸèƒ½ï¼šç­†è¨˜èˆ‡è³‡æ–™ç®¡ç†
     // ==========================
     function saveNote() {
       const note = document.getElementById('note').value;
       localStorage.setItem('investmentNote', note);
-      alert('? µ§°O¤wÀx¦s');
+      alert('? ç­†è¨˜å·²å„²å­˜');
     }
 
     function savePortfolio() {
@@ -310,7 +310,7 @@
     }
 
     function clearAll() {
-      if (confirm('½T©w­n²M°£©Ò¦³§ë¸ê¸ê®Æ¡Bµ§°O©M§Ö·Ó¶Ü¡H¡]¦¹°Ê§@µLªk´_­ì¡^')) {
+      if (confirm('ç¢ºå®šè¦æ¸…é™¤æ‰€æœ‰æŠ•è³‡è³‡æ–™ã€ç­†è¨˜å’Œå¿«ç…§å—ï¼Ÿï¼ˆæ­¤å‹•ä½œç„¡æ³•å¾©åŸï¼‰')) {
         localStorage.removeItem('portfolio');
         localStorage.removeItem('snapshots');
         localStorage.removeItem('investmentNote');
@@ -322,8 +322,9 @@
       }
     }
 
-    // ¦Û°Ê¨C 5 ¤ÀÄÁ­«·s¾ã²z»ù®æ¡]¥i¿ï¡^
+    // è‡ªå‹•æ¯ 5 åˆ†é˜é‡æ–°æ•´ç†åƒ¹æ ¼ï¼ˆå¯é¸ï¼‰
     // setInterval(loadPortfolio, 5 * 60 * 1000);
   </script>
 </body>
+
 </html>
