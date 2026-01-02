@@ -17,7 +17,7 @@
   </style>
 </head>
 <body>
-  <h1>?? 我的投資儀表板</h1>
+  <h1>我的投資儀表板</h1>
 
   <!-- 資產輸入區 -->
   <div class="card">
@@ -36,7 +36,7 @@
       <input type="text" id="assetSymbol" placeholder="代號（用於查詢價格，如 BTC、GC=F）" />
     </div>
     <button onclick="addAsset()">新增資產</button>
-    <button onclick="clearAll()">?? 清除所有資料（僅本機）</button>
+    <button onclick="clearAll()">清除所有資料（僅本機）</button>
   </div>
 
   <!-- 資產列表與即時價格 -->
@@ -44,7 +44,7 @@
     <h2>我的投資組合</h2>
     <div id="portfolioList"></div>
     <p><strong>總資產價值（估算）：</strong> <span id="totalValue">NT$ 0</span></p>
-    <button onclick="saveSnapshot()">?? 記錄今日總值（用於趨勢圖）</button>
+    <button onclick="saveSnapshot()">記錄今日總值（用於趨勢圖）</button>
   </div>
 
   <!-- 資產配置圖 -->
@@ -57,6 +57,7 @@
   <div class="card">
     <h2>投資組合價值趨勢</h2>
     <canvas id="trendChart" height="150"></canvas>
+    <p id="trendEmptyMessage" style="display:none; color:#666; margin: 8px 0 0;"></p>
   </div>
 
   <!-- 投資筆記 -->
@@ -244,7 +245,7 @@
       snapshots.sort((a, b) => a.date.localeCompare(b.date));
       localStorage.setItem('snapshots', JSON.stringify(snapshots));
       renderTrendChart();
-      alert('? 已記錄今日總值');
+      alert('已記錄今日總值');
     }
 
     // ==========================
@@ -252,13 +253,24 @@
     // ==========================
     let trendChart = null;
     function renderTrendChart() {
-      const ctx = document  .getElementById('trendChart').getContext('2d');
+      const canvas = document.getElementById('trendChart');
+      const emptyEl = document.getElementById('trendEmptyMessage');
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
       if (trendChart) trendChart.destroy();
 
       if (snapshots.length === 0) {
-        document.getElementById('trendChart').parentElement.innerHTML = '<p>尚未記錄任何總值快照。</p>';
+        canvas.style.display = 'none';
+        if (emptyEl) {
+          emptyEl.textContent = '尚未記錄任何總值快照。';
+          emptyEl.style.display = 'block';
+        }
         return;
       }
+
+      canvas.style.display = 'block';
+      if (emptyEl) emptyEl.style.display = 'none';
 
       const labels = snapshots.map(s => s.date);
       const data = snapshots.map(s => s.value);
@@ -302,7 +314,7 @@
     function saveNote() {
       const note = document.getElementById('note').value;
       localStorage.setItem('investmentNote', note);
-      alert('? 筆記已儲存');
+      alert('筆記已儲存');
     }
 
     function savePortfolio() {
