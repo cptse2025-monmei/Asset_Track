@@ -520,8 +520,17 @@
         throw lastErr || new Error('Fetch failed');
       }
 
+      function inferYahooRegion(symbol) {
+        const s = String(symbol || '').toUpperCase();
+        // 台股常見後綴：.TW / .TWO
+        if (s.endsWith('.TW') || s.endsWith('.TWO')) return 'TW';
+        return 'US';
+      }
+
       function buildYahooChartUrls(symbol) {
-        const base = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?region=TW&lang=zh-TW`;
+        const region = inferYahooRegion(symbol);
+        const lang = region === 'TW' ? 'zh-TW' : 'en-US';
+        const base = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?region=${encodeURIComponent(region)}&lang=${encodeURIComponent(lang)}`;
         // 注意：Yahoo Finance 在瀏覽器端常被 CORS 擋下來，所以提供公開代理作為備援
         // 代理屬第三方服務，若不可用可替換成自架 proxy 或改用 Google Sheet/後端 API
         return [
@@ -531,9 +540,36 @@
         ];
       }
 
+      function isLikelyCurrencyCode(v) {
+        return typeof v === 'string' && /^[A-Z]{3}$/.test(v);
+      }
+
+      function formatCurrency(amount, currency) {
+        const n = Number(amount);
+        if (!Number.isFinite(n)) return 'N/A';
+        if (isLikelyCurrencyCode(currency)) {
+          try {
+            return new Intl.NumberFormat('zh-TW', { style: 'currency', currency }).format(n);
+          } catch {
+            // fall through
+          }
+        }
+        return `${currency ? currency + ' ' : ''}${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+      }
+
+      function pickLastFinite(arr) {
+        if (!Array.isArray(arr)) return 0;
+        for (let i = arr.length - 1; i >= 0; i--) {
+          const v = Number(arr[i]);
+          if (Number.isFinite(v) && v !== 0) return v;
+        }
+        return 0;
+      }
+
       const pricePromises = (assets || []).map(async (asset) => {
         let price = 0;
         let displayPrice = 'N/A';
+        let currency = '';
         const amount = (asset.type === 'cash')
           ? (Number(asset.amount) || 0)
           : (Number(asset.amount) || 1);
@@ -550,37 +586,43 @@
             const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=twd`);
             const data = await res.json();
             price = data[id]?.twd || 0;
-            displayPrice = price ? `NT$ ${price.toLocaleString()}` : 'N/A';
+            currency = 'TWD';
+            displayPrice = price ? formatCurrency(price, currency) : 'N/A';
           }
           else if (asset.type === 'commodity' && asset.symbol === 'GOLD') {
             // 免金鑰示範：以固定匯率估算（每公克）
             price = 65000 / 31.1035; // 換算每公克
-            displayPrice = `NT$ ${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}/公克`;
+            currency = 'TWD';
+            displayPrice = `${formatCurrency(price, currency)}/公克`;
           }
           else if (asset.type === 'commodity') {
             // 其它商品（例如 GC=F）：使用 Yahoo Finance（同股票方式）
             const data = await fetchJsonWithFallback(buildYahooChartUrls(asset.symbol));
-            const close = data.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
-            price = close?.[close.length - 1] || 0;
-            displayPrice = price ? `NT$ ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'N/A';
+            const result = data.chart?.result?.[0];
+            currency = result?.meta?.currency || '';
+            price = Number(result?.meta?.regularMarketPrice) || pickLastFinite(result?.indicators?.quote?.[0]?.close);
+            displayPrice = price ? formatCurrency(price, currency) : 'N/A';
           }
           else if (asset.type === 'stock') {
             const data = await fetchJsonWithFallback(buildYahooChartUrls(asset.symbol));
-            const close = data.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
-            price = close?.[close.length - 1] || 0;
-            displayPrice = price ? `NT$ ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'N/A';
+            const result = data.chart?.result?.[0];
+            currency = result?.meta?.currency || '';
+            // 優先用 regularMarketPrice（更接近即時），沒有就用最後一個非空 close
+            price = Number(result?.meta?.regularMarketPrice) || pickLastFinite(result?.indicators?.quote?.[0]?.close);
+            displayPrice = price ? formatCurrency(price, currency) : 'N/A';
           }
           else {
             // 現金或其他：使用者手動輸入價值（此處設為 1）
             price = 1;
-            displayPrice = `NT$ ${amount.toLocaleString()}`;
+            currency = 'TWD';
+            displayPrice = formatCurrency(amount, currency);
           }
         } catch (e) {
           console.error('取得價格失敗', asset, e);
         }
 
         const value = asset.type === 'cash' ? amount : (price * amount);
-        return { ...asset, price, value, displayPrice };
+        return { ...asset, price, value, displayPrice, currency };
       });
 
       const updatedAssets = await Promise.all(pricePromises);
