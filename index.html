@@ -506,6 +506,31 @@
     // 功能：取得即時價格（共用：列表/跑馬燈）
     // ==========================
     async function getPricedAssets(assets) {
+      async function fetchJsonWithFallback(urls) {
+        let lastErr = null;
+        for (const url of urls) {
+          try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.json();
+          } catch (e) {
+            lastErr = e;
+          }
+        }
+        throw lastErr || new Error('Fetch failed');
+      }
+
+      function buildYahooChartUrls(symbol) {
+        const base = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?region=TW&lang=zh-TW`;
+        // 注意：Yahoo Finance 在瀏覽器端常被 CORS 擋下來，所以提供公開代理作為備援
+        // 代理屬第三方服務，若不可用可替換成自架 proxy 或改用 Google Sheet/後端 API
+        return [
+          base,
+          `https://corsproxy.io/?${encodeURIComponent(base)}`,
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`
+        ];
+      }
+
       const pricePromises = (assets || []).map(async (asset) => {
         let price = 0;
         let displayPrice = 'N/A';
@@ -534,15 +559,13 @@
           }
           else if (asset.type === 'commodity') {
             // 其它商品（例如 GC=F）：使用 Yahoo Finance（同股票方式）
-            const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${asset.symbol}?region=TW&lang=zh-TW`);
-            const data = await res.json();
+            const data = await fetchJsonWithFallback(buildYahooChartUrls(asset.symbol));
             const close = data.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
             price = close?.[close.length - 1] || 0;
             displayPrice = price ? `NT$ ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'N/A';
           }
           else if (asset.type === 'stock') {
-            const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${asset.symbol}?region=TW&lang=zh-TW`);
-            const data = await res.json();
+            const data = await fetchJsonWithFallback(buildYahooChartUrls(asset.symbol));
             const close = data.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
             price = close?.[close.length - 1] || 0;
             displayPrice = price ? `NT$ ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'N/A';
