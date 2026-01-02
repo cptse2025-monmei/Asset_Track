@@ -184,6 +184,13 @@
         <button type="button" onclick="addTickerCustomItem()">加入追蹤</button>
       </div>
       <div class="ticker-options" id="tickerCustomOptions"></div>
+      <div class="ticker-settings-row" style="margin-top: 10px;">
+        <strong style="color:#111827;">報價 API（可選，用於避免 CORS / 代理不穩）</strong>
+      </div>
+      <div class="ticker-settings-row">
+        <input type="text" id="priceApiUrl" placeholder="貼上你的報價 API Base URL（例如 Google Apps Script Web App）" style="flex:1; min-width: 260px;" />
+        <button type="button" onclick="savePriceApiSettings()">儲存</button>
+      </div>
       <p style="color:#6b7280; margin: 8px 0 0; font-size: 13px;">
         提示：跑馬燈可同時顯示多個標的；選項可來自投資組合或自訂追蹤。加密貨幣若查不到，請改用 CoinGecko 的 coin id（例如 bitcoin、ethereum）。
       </p>
@@ -254,8 +261,11 @@
     const TICKER_SELECTION_KEY = 'tickerSelectionV1';
     const TICKER_PREV_PRICE_KEY = 'tickerPrevPricesV1';
     const TICKER_CUSTOM_ITEMS_KEY = 'tickerCustomItemsV1';
+    const PRICE_API_URL_KEY = 'priceApiUrlV1';
+    const FX_CACHE_KEY = 'fxCacheV1';
     const TICKER_SUPPORTED_TYPES = new Set(['stock', 'crypto', 'commodity']);
     let pricedPortfolioCacheById = new Map();
+    let lastTotalValueTwd = 0;
 
     function generateAssetId() {
       if (window.crypto?.randomUUID) return crypto.randomUUID();
@@ -297,6 +307,25 @@
       el.style.display = (el.style.display === 'block') ? 'none' : 'block';
     }
 
+    function getPriceApiUrl() {
+      return (localStorage.getItem(PRICE_API_URL_KEY) || '').trim();
+    }
+
+    function setPriceApiUrl(url) {
+      const clean = String(url || '').trim();
+      if (clean) localStorage.setItem(PRICE_API_URL_KEY, clean);
+      else localStorage.removeItem(PRICE_API_URL_KEY);
+    }
+
+    function savePriceApiSettings() {
+      const el = document.getElementById('priceApiUrl');
+      if (!el) return;
+      setPriceApiUrl(el.value);
+      alert('已儲存報價 API 設定（重新整理價格後生效）');
+      refreshTickerPrices();
+      loadPortfolio();
+    }
+
     function tickerSelectAll() {
       const allIds = getTickerCandidates()
         .filter(a => TICKER_SUPPORTED_TYPES.has(a.type))
@@ -315,6 +344,9 @@
       const box = document.getElementById('tickerOptions');
       const customBox = document.getElementById('tickerCustomOptions');
       if (!box) return;
+
+      const apiUrlEl = document.getElementById('priceApiUrl');
+      if (apiUrlEl) apiUrlEl.value = getPriceApiUrl();
 
       const selection = new Set(getTickerSelection());
       const candidates = portfolio.filter(a => TICKER_SUPPORTED_TYPES.has(a.type));
@@ -520,6 +552,21 @@
         throw lastErr || new Error('Fetch failed');
       }
 
+      function normalizeBaseUrl(url) {
+        return String(url || '').trim().replace(/\/+$/, '');
+      }
+
+      function buildCustomApiUrls(params) {
+        const baseUrl = normalizeBaseUrl(getPriceApiUrl());
+        if (!baseUrl) return [];
+        const qs = new URLSearchParams(params);
+        // 允許兩種風格：baseUrl 本身是 endpoint，或 baseUrl + /price
+        return [
+          `${baseUrl}?${qs.toString()}`,
+          `${baseUrl}/price?${qs.toString()}`
+        ];
+      }
+
       function inferYahooRegion(symbol) {
         const s = String(symbol || '').toUpperCase();
         // 台股常見後綴：.TW / .TWO
@@ -566,6 +613,55 @@
         return 0;
       }
 
+      function getFxCache() {
+        try {
+          const raw = localStorage.getItem(FX_CACHE_KEY);
+          const parsed = raw ? JSON.parse(raw) : null;
+          return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch {
+          return null;
+        }
+      }
+
+      function setFxCache(cache) {
+        try {
+          localStorage.setItem(FX_CACHE_KEY, JSON.stringify(cache || {}));
+        } catch {
+          // ignore
+        }
+      }
+
+      async function getUsdToTwdRate() {
+        const now = Date.now();
+        const cache = getFxCache();
+        // 快取 6 小時
+        if (cache?.usdToTwd && cache?.ts && (now - cache.ts) < 6 * 60 * 60 * 1000) {
+          return Number(cache.usdToTwd) || 0;
+        }
+
+        // 若有自訂 API，先嘗試使用（可回傳 { rates: { TWD: 31.2 } } 或 { usdToTwd: 31.2 }）
+        const customUrls = buildCustomApiUrls({ type: 'fx', base: 'USD' });
+        try {
+          if (customUrls.length) {
+            const data = await fetchJsonWithFallback(customUrls);
+            const rate = Number(data?.usdToTwd) || Number(data?.rates?.TWD) || 0;
+            if (rate) {
+              setFxCache({ ts: now, usdToTwd: rate });
+              return rate;
+            }
+          }
+        } catch {
+          // ignore, fallback below
+        }
+
+        // 公開匯率來源（免 key）
+        const res = await fetch(`https://open.er-api.com/v6/latest/USD`);
+        const data = await res.json();
+        const rate = Number(data?.rates?.TWD) || 0;
+        if (rate) setFxCache({ ts: now, usdToTwd: rate });
+        return rate;
+      }
+
       const pricePromises = (assets || []).map(async (asset) => {
         let price = 0;
         let displayPrice = 'N/A';
@@ -596,20 +692,43 @@
             displayPrice = `${formatCurrency(price, currency)}/公克`;
           }
           else if (asset.type === 'commodity') {
-            // 其它商品（例如 GC=F）：使用 Yahoo Finance（同股票方式）
-            const data = await fetchJsonWithFallback(buildYahooChartUrls(asset.symbol));
-            const result = data.chart?.result?.[0];
-            currency = result?.meta?.currency || '';
-            price = Number(result?.meta?.regularMarketPrice) || pickLastFinite(result?.indicators?.quote?.[0]?.close);
-            displayPrice = price ? formatCurrency(price, currency) : 'N/A';
+            // 其它商品（例如 GC=F）：優先自訂 API，失敗再用 Yahoo Finance
+            let data = null;
+            const customUrls = buildCustomApiUrls({ type: 'commodity', symbol: asset.symbol });
+            if (customUrls.length) {
+              try { data = await fetchJsonWithFallback(customUrls); } catch { data = null; }
+            }
+            if (data?.price) {
+              price = Number(data.price) || 0;
+              currency = data.currency || '';
+              displayPrice = price ? formatCurrency(price, currency) : 'N/A';
+            } else {
+              const yahoo = await fetchJsonWithFallback(buildYahooChartUrls(asset.symbol));
+              const result = yahoo.chart?.result?.[0];
+              currency = result?.meta?.currency || '';
+              price = Number(result?.meta?.regularMarketPrice) || pickLastFinite(result?.indicators?.quote?.[0]?.close);
+              displayPrice = price ? formatCurrency(price, currency) : 'N/A';
+            }
           }
           else if (asset.type === 'stock') {
-            const data = await fetchJsonWithFallback(buildYahooChartUrls(asset.symbol));
-            const result = data.chart?.result?.[0];
-            currency = result?.meta?.currency || '';
-            // 優先用 regularMarketPrice（更接近即時），沒有就用最後一個非空 close
-            price = Number(result?.meta?.regularMarketPrice) || pickLastFinite(result?.indicators?.quote?.[0]?.close);
-            displayPrice = price ? formatCurrency(price, currency) : 'N/A';
+            // 股票：優先自訂 API，失敗再用 Yahoo Finance
+            let data = null;
+            const customUrls = buildCustomApiUrls({ type: 'stock', symbol: asset.symbol });
+            if (customUrls.length) {
+              try { data = await fetchJsonWithFallback(customUrls); } catch { data = null; }
+            }
+            if (data?.price) {
+              price = Number(data.price) || 0;
+              currency = data.currency || '';
+              displayPrice = price ? formatCurrency(price, currency) : 'N/A';
+            } else {
+              const yahoo = await fetchJsonWithFallback(buildYahooChartUrls(asset.symbol));
+              const result = yahoo.chart?.result?.[0];
+              currency = result?.meta?.currency || '';
+              // 優先用 regularMarketPrice（更接近即時），沒有就用最後一個非空 close
+              price = Number(result?.meta?.regularMarketPrice) || pickLastFinite(result?.indicators?.quote?.[0]?.close);
+              displayPrice = price ? formatCurrency(price, currency) : 'N/A';
+            }
           }
           else {
             // 現金或其他：使用者手動輸入價值（此處設為 1）
@@ -621,8 +740,14 @@
           console.error('取得價格失敗', asset, e);
         }
 
-        const value = asset.type === 'cash' ? amount : (price * amount);
-        return { ...asset, price, value, displayPrice, currency };
+        const valueNative = asset.type === 'cash' ? amount : (price * amount);
+        let valueTwd = valueNative;
+        if (currency === 'USD') {
+          const usdToTwd = await getUsdToTwdRate();
+          if (usdToTwd) valueTwd = valueNative * usdToTwd;
+        }
+        // 其他幣別目前先不換（可再擴充）
+        return { ...asset, price, value: valueTwd, valueNative, displayPrice, currency };
       });
 
       const updatedAssets = await Promise.all(pricePromises);
@@ -647,6 +772,7 @@
 
       const { updatedAssets, totalValue } = await getPricedAssets(portfolio);
       pricedPortfolioCacheById = new Map(updatedAssets.map(a => [a.id, a]));
+      lastTotalValueTwd = totalValue;
 
       // 更新畫面
       let html = '';
@@ -656,13 +782,13 @@
             <strong>${asset.name}</strong> (${asset.symbol || asset.type})
             <span>數量: ${asset.amount}</span>
             <span>市價: ${asset.displayPrice}</span>
-            <span>市值: NT$ ${asset.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+            <span>市值（估算 NT$）: ${new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', maximumFractionDigits: 0 }).format(asset.value || 0)}</span>
           </div>
         `;
       });
-      html += `<p><strong>總資產價值：NT$ ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong></p>`;
+      html += `<p><strong>總資產價值（估算 NT$）：${new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', maximumFractionDigits: 0 }).format(totalValue || 0)}</strong></p>`;
       listEl.innerHTML = html;
-      document.getElementById('totalValue').textContent = `NT$ ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+      document.getElementById('totalValue').textContent = new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', maximumFractionDigits: 0 }).format(totalValue || 0);
 
       // 儲存更新後的組合（含價格快取）
       renderAllocationChart(updatedAssets);
@@ -796,9 +922,7 @@
     // 功能：記錄總值快照（用於趨勢圖）
     // ==========================
     function saveSnapshot() {
-      const totalEl = document.getElementById('totalValue').textContent;
-      const valueText = totalEl.replace(/[^0-9]/g, '');
-      const value = parseInt(valueText) || 0;
+      const value = Math.round(Number(lastTotalValueTwd) || 0);
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
       // 避免同一天重複記錄
@@ -897,6 +1021,8 @@
         localStorage.removeItem(TICKER_SELECTION_KEY);
         localStorage.removeItem(TICKER_PREV_PRICE_KEY);
         localStorage.removeItem(TICKER_CUSTOM_ITEMS_KEY);
+        localStorage.removeItem(PRICE_API_URL_KEY);
+        localStorage.removeItem(FX_CACHE_KEY);
         portfolio = [];
         snapshots = [];
         document.getElementById('note').value = '';
