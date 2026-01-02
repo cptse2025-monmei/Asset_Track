@@ -14,9 +14,182 @@
     button:hover { background: #2980b9; }
     canvas { max-width: 100%; }
     .asset-item { display: flex; gap: 8px; margin: 8px 0; align-items: center; }
+
+    /* ==========================
+       頂部價格跑馬燈（右 -> 左）
+       ========================== */
+    .ticker-bar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      border: 1px solid rgba(0,0,0,0.06);
+      padding: 10px 12px;
+      margin: 0 0 14px 0;
+    }
+    .ticker-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .ticker-title {
+      font-weight: 700;
+      color: #2c3e50;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .ticker-subtitle {
+      font-weight: 400;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .ticker-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .ticker-actions button {
+      background: #111827;
+    }
+    .ticker-actions button:hover {
+      background: #0b1220;
+    }
+    .ticker-settings {
+      display: none;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+    .ticker-settings-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .ticker-options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 12px;
+    }
+    @media (max-width: 640px) {
+      .ticker-options { grid-template-columns: 1fr; }
+    }
+    .ticker-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #111827;
+      font-size: 14px;
+      user-select: none;
+    }
+    .ticker-viewport {
+      width: 100%;
+      overflow: hidden;
+      border-radius: 8px;
+      background: linear-gradient(90deg, rgba(52,152,219,0.10), rgba(155,89,182,0.10));
+      border: 1px solid rgba(0,0,0,0.05);
+      padding: 10px 0;
+    }
+    .ticker-track {
+      display: flex;
+      width: max-content;
+      will-change: transform;
+      animation: ticker-scroll 26s linear infinite;
+    }
+    .ticker-viewport:hover .ticker-track {
+      animation-play-state: paused;
+    }
+    .ticker-group {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 0 14px;
+      flex-shrink: 0;
+    }
+    .ticker-item {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 8px;
+      white-space: nowrap;
+      color: #111827;
+      font-size: 15px;
+    }
+    .ticker-item strong {
+      color: #111827;
+    }
+    .ticker-sep {
+      color: rgba(0,0,0,0.35);
+    }
+    .ticker-delta {
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+    .ticker-delta.up { color: #0f766e; }
+    .ticker-delta.down { color: #b91c1c; }
+    .ticker-delta.flat { color: #6b7280; }
+    .ticker--static .ticker-track {
+      animation: none;
+      transform: translateX(0);
+    }
+    @keyframes ticker-scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
   </style>
 </head>
 <body>
+  <!-- 頂部價格跑馬燈 -->
+  <div class="ticker-bar ticker--static" id="tickerBar">
+    <div class="ticker-header">
+      <div class="ticker-title">
+        即時價格跑馬燈
+        <span class="ticker-subtitle">（由右往左移動，滑鼠移上可暫停）</span>
+      </div>
+      <div class="ticker-actions">
+        <button type="button" onclick="toggleTickerSettings()">設定</button>
+      </div>
+    </div>
+    <div class="ticker-viewport">
+      <div class="ticker-track" id="tickerTrack">
+        <div class="ticker-group" id="tickerGroupA"></div>
+        <div class="ticker-group" id="tickerGroupB"></div>
+      </div>
+    </div>
+    <div class="ticker-settings" id="tickerSettings">
+      <div class="ticker-settings-row">
+        <button type="button" onclick="tickerSelectAll()">全選</button>
+        <button type="button" onclick="tickerSelectNone()">全不選</button>
+        <button type="button" onclick="refreshTickerPrices()">更新價格</button>
+      </div>
+      <div class="ticker-options" id="tickerOptions"></div>
+      <div class="ticker-settings-row" style="margin-top: 10px;">
+        <strong style="color:#111827;">自訂追蹤（不加入投資組合）</strong>
+      </div>
+      <div class="ticker-settings-row">
+        <select id="tickerCustomType" aria-label="自訂類型">
+          <option value="stock">股票</option>
+          <option value="crypto">加密貨幣</option>
+          <option value="commodity">商品</option>
+        </select>
+        <input type="text" id="tickerCustomSymbol" placeholder="代號（例：AAPL、GC=F、BTC 或 coingecko id）" />
+        <input type="text" id="tickerCustomName" placeholder="顯示名稱（可留空）" />
+        <button type="button" onclick="addTickerCustomItem()">加入追蹤</button>
+      </div>
+      <div class="ticker-options" id="tickerCustomOptions"></div>
+      <p style="color:#6b7280; margin: 8px 0 0; font-size: 13px;">
+        提示：跑馬燈可同時顯示多個標的；選項可來自投資組合或自訂追蹤。加密貨幣若查不到，請改用 CoinGecko 的 coin id（例如 bitcoin、ethereum）。
+      </p>
+    </div>
+  </div>
+
   <h1>我的投資儀表板</h1>
 
   <!-- 資產輸入區 -->
@@ -76,10 +249,238 @@
     let note = localStorage.getItem('investmentNote') || '';
 
     // ==========================
+    // 跑馬燈：設定與狀態（僅本機 localStorage）
+    // ==========================
+    const TICKER_SELECTION_KEY = 'tickerSelectionV1';
+    const TICKER_PREV_PRICE_KEY = 'tickerPrevPricesV1';
+    const TICKER_CUSTOM_ITEMS_KEY = 'tickerCustomItemsV1';
+    const TICKER_SUPPORTED_TYPES = new Set(['stock', 'crypto', 'commodity']);
+    let pricedPortfolioCacheById = new Map();
+
+    function generateAssetId() {
+      if (window.crypto?.randomUUID) return crypto.randomUUID();
+      return 'a_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+    }
+
+    // 只會補上缺少的 id，不會刪除使用者資料
+    function ensureAssetIds() {
+      let changed = false;
+      portfolio = portfolio.map((a) => {
+        if (!a.id) {
+          changed = true;
+          return { ...a, id: generateAssetId() };
+        }
+        return a;
+      });
+      if (changed) savePortfolio();
+    }
+
+    function getTickerSelection() {
+      try {
+        const raw = localStorage.getItem(TICKER_SELECTION_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function setTickerSelection(ids) {
+      const safeIds = Array.from(new Set((ids || []).filter(Boolean)));
+      localStorage.setItem(TICKER_SELECTION_KEY, JSON.stringify(safeIds));
+      renderTickerSettings();
+    }
+
+    function toggleTickerSettings() {
+      const el = document.getElementById('tickerSettings');
+      if (!el) return;
+      el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function tickerSelectAll() {
+      const allIds = getTickerCandidates()
+        .filter(a => TICKER_SUPPORTED_TYPES.has(a.type))
+        .map(a => a.id)
+        .filter(Boolean);
+      setTickerSelection(allIds);
+      refreshTickerPrices();
+    }
+
+    function tickerSelectNone() {
+      setTickerSelection([]);
+      updateTicker([]);
+    }
+
+    function renderTickerSettings() {
+      const box = document.getElementById('tickerOptions');
+      const customBox = document.getElementById('tickerCustomOptions');
+      if (!box) return;
+
+      const selection = new Set(getTickerSelection());
+      const candidates = portfolio.filter(a => TICKER_SUPPORTED_TYPES.has(a.type));
+      const customItems = getTickerCustomItems().filter(a => TICKER_SUPPORTED_TYPES.has(a.type));
+
+      if (candidates.length === 0) {
+        box.innerHTML = '<p style="grid-column: 1 / -1; color:#6b7280; margin:0;">尚無可顯示的標的（請先在下方新增股票/加密貨幣/商品）。</p>';
+      } else {
+        box.innerHTML = candidates.map((a) => {
+          const label = `${a.name}${a.symbol ? ` (${a.symbol})` : ''}`;
+          const checked = selection.has(a.id) ? 'checked' : '';
+          return `
+            <label class="ticker-option">
+              <input type="checkbox" data-asset-id="${a.id}" ${checked} />
+              <span>${label}</span>
+            </label>
+          `;
+        }).join('');
+      }
+
+      box.querySelectorAll('input[type="checkbox"][data-asset-id]').forEach((input) => {
+        input.addEventListener('change', () => {
+          const id = input.getAttribute('data-asset-id');
+          const next = new Set(getTickerSelection());
+          if (input.checked) next.add(id);
+          else next.delete(id);
+          setTickerSelection([...next]);
+          refreshTickerPrices();
+        });
+      });
+
+      if (customBox) {
+        if (customItems.length === 0) {
+          customBox.innerHTML = '<p style="grid-column: 1 / -1; color:#6b7280; margin:0;">尚未加入任何自訂追蹤。</p>';
+        } else {
+          customBox.innerHTML = customItems.map((a) => {
+            const label = `${a.name || a.symbol}${a.symbol ? ` (${a.symbol})` : ''}`;
+            const checked = selection.has(a.id) ? 'checked' : '';
+            return `
+              <label class="ticker-option" style="justify-content: space-between;">
+                <span style="display:flex; align-items:center; gap:8px;">
+                  <input type="checkbox" data-custom-id="${a.id}" ${checked} />
+                  <span>${label}</span>
+                </span>
+                <button type="button" data-custom-remove="${a.id}" style="background:#ef4444;">移除</button>
+              </label>
+            `;
+          }).join('');
+        }
+
+        customBox.querySelectorAll('input[type="checkbox"][data-custom-id]').forEach((input) => {
+          input.addEventListener('change', () => {
+            const id = input.getAttribute('data-custom-id');
+            const next = new Set(getTickerSelection());
+            if (input.checked) next.add(id);
+            else next.delete(id);
+            setTickerSelection([...next]);
+            refreshTickerPrices();
+          });
+        });
+
+        customBox.querySelectorAll('button[data-custom-remove]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-custom-remove');
+            removeTickerCustomItem(id);
+          });
+        });
+      }
+    }
+
+    function getPrevPriceMap() {
+      try {
+        const raw = localStorage.getItem(TICKER_PREV_PRICE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return (parsed && typeof parsed === 'object') ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function setPrevPriceMap(map) {
+      try {
+        localStorage.setItem(TICKER_PREV_PRICE_KEY, JSON.stringify(map || {}));
+      } catch {
+        // ignore
+      }
+    }
+
+    function formatDelta(delta) {
+      const sign = delta > 0 ? '+' : '';
+      const abs = Math.abs(delta);
+      // 盡量避免太長的小數
+      const formatted = abs >= 100 ? abs.toFixed(0) : abs.toFixed(2);
+      return `${sign}${formatted}`;
+    }
+
+    function updateTicker(pricedAssets) {
+      const bar = document.getElementById('tickerBar');
+      const groupA = document.getElementById('tickerGroupA');
+      const groupB = document.getElementById('tickerGroupB');
+      if (!bar || !groupA || !groupB) return;
+
+      const selection = new Set(getTickerSelection());
+      const candidates = pricedAssets || [];
+      const shown = candidates
+        .filter(a => selection.has(a.id))
+        .filter(a => TICKER_SUPPORTED_TYPES.has(a.type));
+
+      if (shown.length === 0) {
+        bar.classList.add('ticker--static');
+        const msg = `<span class="ticker-item"><strong>尚未選擇任何標的</strong><span class="ticker-sep">•</span><span style="color:#6b7280;">點「設定」可多選顯示</span></span>`;
+        groupA.innerHTML = msg;
+        groupB.innerHTML = msg;
+        return;
+      }
+
+      const prev = getPrevPriceMap();
+      const nextPrev = { ...prev };
+
+      const parts = shown.map((a) => {
+        const key = a.id;
+        const now = Number(a.price) || 0;
+        const prevPrice = Number(prev[key]) || 0;
+        let deltaHtml = `<span class="ticker-delta flat">—</span>`;
+        if (now && prevPrice) {
+          const delta = now - prevPrice;
+          const cls = delta > 0 ? 'up' : (delta < 0 ? 'down' : 'flat');
+          deltaHtml = `<span class="ticker-delta ${cls}">${formatDelta(delta)}</span>`;
+        }
+        if (now) nextPrev[key] = now;
+
+        const displayName = a.name || a.symbol || '未命名';
+        const symbolText = a.symbol ? `(${a.symbol})` : `(${a.type})`;
+        const priceText = a.displayPrice || 'N/A';
+        return `
+          <span class="ticker-item">
+            <strong>${displayName}</strong> ${symbolText}
+            <span class="ticker-sep">•</span>
+            <span>${priceText}</span>
+            ${deltaHtml}
+          </span>
+        `;
+      });
+
+      setPrevPriceMap(nextPrev);
+
+      // 如果內容太短也允許滾動；這裡只在有內容時啟用動畫
+      bar.classList.remove('ticker--static');
+      const html = parts.join('<span class="ticker-sep">｜</span>');
+      groupA.innerHTML = html;
+      groupB.innerHTML = html;
+    }
+
+    // ==========================
     // 初始化
     // ==========================
     document.getElementById('note').value = note;
+    ensureAssetIds();
+    renderTickerSettings();
     loadPortfolio();
+
+    // 每 2 分鐘更新跑馬燈價格（不會清空投資組合列表畫面）
+    setInterval(() => {
+      const selection = getTickerSelection();
+      if (selection.length > 0) refreshTickerPrices();
+    }, 2 * 60 * 1000);
 
     // ==========================
     // 功能：新增資產
@@ -95,9 +496,73 @@
         return;
       }
 
-      portfolio.push({ name, type, amount, symbol, note: '' });
+      portfolio.push({ id: generateAssetId(), name, type, amount, symbol, note: '' });
       savePortfolio();
+      renderTickerSettings();
       loadPortfolio();
+    }
+
+    // ==========================
+    // 功能：取得即時價格（共用：列表/跑馬燈）
+    // ==========================
+    async function getPricedAssets(assets) {
+      const pricePromises = (assets || []).map(async (asset) => {
+        let price = 0;
+        let displayPrice = 'N/A';
+        const amount = (asset.type === 'cash')
+          ? (Number(asset.amount) || 0)
+          : (Number(asset.amount) || 1);
+
+        try {
+          if (asset.type === 'crypto') {
+            // 使用 CoinGecko（支援比特幣、以太幣等）
+            const idMap = {
+              'BTC': 'bitcoin',
+              'ETH': 'ethereum',
+              // 可依需要擴充
+            };
+            const id = idMap[asset.symbol?.toUpperCase?.()] || (asset.symbol || '').toLowerCase();
+            const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=twd`);
+            const data = await res.json();
+            price = data[id]?.twd || 0;
+            displayPrice = price ? `NT$ ${price.toLocaleString()}` : 'N/A';
+          }
+          else if (asset.type === 'commodity' && asset.symbol === 'GOLD') {
+            // 免金鑰示範：以固定匯率估算（每公克）
+            price = 65000 / 31.1035; // 換算每公克
+            displayPrice = `NT$ ${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}/公克`;
+          }
+          else if (asset.type === 'commodity') {
+            // 其它商品（例如 GC=F）：使用 Yahoo Finance（同股票方式）
+            const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${asset.symbol}?region=TW&lang=zh-TW`);
+            const data = await res.json();
+            const close = data.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+            price = close?.[close.length - 1] || 0;
+            displayPrice = price ? `NT$ ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'N/A';
+          }
+          else if (asset.type === 'stock') {
+            const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${asset.symbol}?region=TW&lang=zh-TW`);
+            const data = await res.json();
+            const close = data.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+            price = close?.[close.length - 1] || 0;
+            displayPrice = price ? `NT$ ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'N/A';
+          }
+          else {
+            // 現金或其他：使用者手動輸入價值（此處設為 1）
+            price = 1;
+            displayPrice = `NT$ ${amount.toLocaleString()}`;
+          }
+        } catch (e) {
+          console.error('取得價格失敗', asset, e);
+        }
+
+        const value = asset.type === 'cash' ? amount : (price * amount);
+        return { ...asset, price, value, displayPrice };
+      });
+
+      const updatedAssets = await Promise.all(pricePromises);
+      const totalValue = updatedAssets.reduce((sum, a) => sum + (Number(a.value) || 0), 0);
+      return { updatedAssets, totalValue };
     }
 
     // ==========================
@@ -110,66 +575,13 @@
       if (portfolio.length === 0) {
         listEl.innerHTML = '<p>尚未新增任何投資標的。</p>';
         renderAllocationChart([]);
+        pricedPortfolioCacheById = new Map();
+        refreshTickerPrices();
         return;
       }
 
-      let totalValue = 0;
-      const assetValues = [];
-
-      // 同時取得所有資產的即時價格
-      const pricePromises = portfolio.map(async (asset) => {
-        let price = 0;
-        let displayPrice = 'N/A';
-
-        try {
-          if (asset.type === 'crypto') {
-            // 使用 CoinGecko（支援比特幣、以太幣等）
-            const idMap = {
-              'BTC': 'bitcoin',
-              'ETH': 'ethereum',
-              // 可依需要擴充
-            };
-            const id = idMap[asset.symbol.toUpperCase()] || asset.symbol.toLowerCase();
-            const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=twd`);
-            const data = await res.json();
-            price = data[id]?.twd || 0;
-            displayPrice = price ? `NT$ ${price.toLocaleString()}` : 'N/A';
-          } 
-          else if (asset.type === 'commodity' && asset.symbol === 'GOLD') {
-            // 使用 GoldAPI（免費，需註冊取得金鑰，但我們用替代方案）
-            // 免金鑰方案：使用 Alpha Vantage 的數值金屬（這裡簡化為固定匯率估算）
-            // 實際可改用：https://www.goldapi.io/ （需金鑰）
-            // 此處以 1 盎司 ? NT$ 65,000 估算（僅示範）
-            price = 65000 / 31.1035; // 換算每公克
-            displayPrice = `NT$ ${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}/公克`;
-          }
-          else if (asset.type === 'stock') {
-            // 股票價格：使用 Yahoo Finance（透過 public proxy）
-            // 注意：Yahoo Finance 官方不提供免費 API，但有公開代理可用
-            // 以下使用 yfinance 的公開代理（非官方，但常見）
-            const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${asset.symbol}?region=TW&lang=zh-TW`);
-            const data = await res.json();
-            const close = data.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
-            price = close?.[close.length - 1] || 0;
-            displayPrice = price ? `NT$ ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'N/A';
-          }
-          else {
-            // 現金或其他：使用者手動輸入價值（此處設為 1）
-            price = 1;
-            displayPrice = `NT$ ${asset.amount.toLocaleString()}`;
-          }
-        } catch (e) {
-          console.error('取得價格失敗', asset, e);
-        }
-
-        const value = asset.type === 'cash' ? asset.amount : (price * asset.amount);
-        totalValue += value;
-        assetValues.push({ ...asset, price, value, displayPrice });
-
-        return { ...asset, price, value, displayPrice };
-      });
-
-      const updatedAssets = await Promise.all(pricePromises);
+      const { updatedAssets, totalValue } = await getPricedAssets(portfolio);
+      pricedPortfolioCacheById = new Map(updatedAssets.map(a => [a.id, a]));
 
       // 更新畫面
       let html = '';
@@ -189,6 +601,109 @@
 
       // 儲存更新後的組合（含價格快取）
       renderAllocationChart(updatedAssets);
+      refreshTickerPrices();
+    }
+
+    function getTickerCustomItems() {
+      try {
+        const raw = localStorage.getItem(TICKER_CUSTOM_ITEMS_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function setTickerCustomItems(items) {
+      const safe = Array.isArray(items) ? items : [];
+      localStorage.setItem(TICKER_CUSTOM_ITEMS_KEY, JSON.stringify(safe));
+      renderTickerSettings();
+    }
+
+    function getTickerCandidates() {
+      const custom = getTickerCustomItems();
+      return [...portfolio, ...custom];
+    }
+
+    function addTickerCustomItem() {
+      const typeEl = document.getElementById('tickerCustomType');
+      const symbolEl = document.getElementById('tickerCustomSymbol');
+      const nameEl = document.getElementById('tickerCustomName');
+      if (!typeEl || !symbolEl || !nameEl) return;
+
+      const type = String(typeEl.value || '').trim();
+      const symbol = String(symbolEl.value || '').trim();
+      const name = String(nameEl.value || '').trim();
+
+      if (!TICKER_SUPPORTED_TYPES.has(type)) {
+        alert('自訂追蹤僅支援：股票/加密貨幣/商品');
+        return;
+      }
+      if (!symbol) {
+        alert('請輸入代號');
+        return;
+      }
+
+      const items = getTickerCustomItems();
+      const id = generateAssetId();
+      const item = { id, type, symbol, name: name || symbol };
+      items.push(item);
+      setTickerCustomItems(items);
+
+      // 預設勾選新加入的項目
+      const nextSel = new Set(getTickerSelection());
+      nextSel.add(id);
+      setTickerSelection([...nextSel]);
+
+      symbolEl.value = '';
+      nameEl.value = '';
+      refreshTickerPrices();
+    }
+
+    function removeTickerCustomItem(id) {
+      if (!id) return;
+      if (!confirm('確定要移除此自訂追蹤項目嗎？')) return;
+
+      const items = getTickerCustomItems().filter(a => a.id !== id);
+      setTickerCustomItems(items);
+
+      const nextSel = new Set(getTickerSelection());
+      nextSel.delete(id);
+      setTickerSelection([...nextSel]);
+      refreshTickerPrices();
+    }
+
+    // ==========================
+    // 功能：只更新跑馬燈價格（不打斷列表顯示）
+    // ==========================
+    async function refreshTickerPrices() {
+      const selection = new Set(getTickerSelection());
+      const candidates = getTickerCandidates();
+      const selectedAssets = candidates
+        .filter(a => selection.has(a.id))
+        .filter(a => TICKER_SUPPORTED_TYPES.has(a.type));
+
+      if (selectedAssets.length === 0) {
+        updateTicker([]);
+        return;
+      }
+
+      // 優先使用投資組合列表剛抓到的價格（避免重複打 API）
+      const cached = [];
+      const toFetch = [];
+      selectedAssets.forEach((a) => {
+        const cachedAsset = pricedPortfolioCacheById.get(a.id);
+        if (cachedAsset) cached.push(cachedAsset);
+        else toFetch.push(a);
+      });
+
+      if (toFetch.length === 0) {
+        updateTicker(cached);
+        return;
+      }
+
+      const { updatedAssets } = await getPricedAssets(toFetch);
+      updateTicker([...cached, ...updatedAssets]);
     }
 
     // ==========================
@@ -326,9 +841,14 @@
         localStorage.removeItem('portfolio');
         localStorage.removeItem('snapshots');
         localStorage.removeItem('investmentNote');
+        // 也一併清除跑馬燈顯示偏好（此按鈕本身已要求確認）
+        localStorage.removeItem(TICKER_SELECTION_KEY);
+        localStorage.removeItem(TICKER_PREV_PRICE_KEY);
+        localStorage.removeItem(TICKER_CUSTOM_ITEMS_KEY);
         portfolio = [];
         snapshots = [];
         document.getElementById('note').value = '';
+        renderTickerSettings();
         loadPortfolio();
         renderTrendChart();
       }
